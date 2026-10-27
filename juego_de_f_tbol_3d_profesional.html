@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Super Soccer 3D - Edición Estadio Champions</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Montserrat', 'Segoe UI', Roboto, sans-serif;
+      background-color: #030712;
+      color: #ffffff;
+    }
+    #game-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Scoreboard HUD */
+    #scoreboard {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10, 15, 29, 0.85);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 8px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(46, 204, 113, 0.2);
+      z-index: 10;
+    }
+    .team-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: 1px;
+    }
+    .badge-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.8);
+    }
+    .badge-red { background: #e74c3c; box-shadow: 0 0 10px #e74c3c; }
+    .badge-blue { background: #3498db; box-shadow: 0 0 10px #3498db; }
+    
+    .score-display {
+      font-size: 28px;
+      font-weight: 900;
+      background: linear-gradient(180deg, #ffffff, #bdc3c7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      padding: 0 10px;
+      min-width: 70px;
+      text-align: center;
+    }
+    .match-timer {
+      font-family: monospace;
+      font-size: 16px;
+      color: #2ecc71;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 4px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(46, 204, 113, 0.3);
+    }
+
+    /* Kick Power Meter */
+    #power-meter-container {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 280px;
+      background: rgba(10, 15, 29, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      padding: 10px 16px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+      z-index: 10;
+    }
+    .meter-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #f1c40f;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+    }
+    .meter-bar-bg {
+      width: 100%;
+      height: 14px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 7px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    #power-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2ecc71, #f1c40f, #e74c3c);
+      border-radius: 7px;
+      transition: width 0.05s linear;
+    }
+
+    /* Controls HUD / Help */
+    #controls-hud {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(10, 16, 26, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      padding: 14px 18px;
+      border-radius: 12px;
+      font-size: 12px;
+      z-index: 10;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+    #controls-hud h3 {
+      margin: 0 0 8px 0;
+      color: #2ecc71;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    #controls-hud ul {
+      margin: 0;
+      padding-left: 16px;
+      line-height: 1.6;
+      color: #d1d5db;
+    }
+    kbd {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    /* Goal Overlay Banner */
+    #goal-banner {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.5);
+      opacity: 0;
+      pointer-events: none;
+      font-size: 80px;
+      font-weight: 900;
+      font-style: italic;
+      text-transform: uppercase;
+      background: linear-gradient(180deg, #ffe600, #ff5500);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 10px 30px rgba(255, 85, 0, 0.5);
+      transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 20;
+      letter-spacing: 4px;
+    }
+    #goal-banner.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.1);
+    }
+
+    /* Onscreen Mobile Controls */
+    #touch-controls {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      gap: 12px;
+      z-index: 15;
+    }
+    .touch-btn {
+      width: 65px;
+      height: 65px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(8px);
+      color: white;
+      font-weight: bold;
+      font-size: 13px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      touch-action: manipulation;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+    }
+    .touch-btn:active {
+      background: rgba(46, 204, 113, 0.5);
+      transform: scale(0.95);
+    }
+
+    @media (max-width: 768px) {
+      #controls-hud { display: none; }
+      #scoreboard { padding: 6px 14px; gap: 10px; }
+      .score-display { font-size: 20px; }
+      #goal-banner { font-size: 50px; }
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <div id="game-container">
+    <!-- Scoreboard -->
+    <div id="scoreboard">
+      <div class="team-badge">
+        <div class="badge-color badge-red"></div>
+        <span>RED SQUAD</span>
+      </div>
+      <div class="score-display"><span id="score-red">0</span> - <span id="score-blue">0</span></div>
+      <div class="team-badge">
+        <span>RIVAL FC</span>
+        <div class="badge-color badge-blue"></div>
+      </div>
+      <div class="match-timer" id="match-timer">00:00</div>
+    </div>
+
+    <!-- Power Meter -->
+    <div id="power-meter-container">
+      <div class="meter-label">
+        <span>Potencia de Tiro</span>
+        <span id="power-text">0%</span>
+      </div>
+      <div class="meter-bar-bg">
+        <div id="power-bar"></div>
+      </div>
+    </div>
+
+    <!-- Controls Info -->
+    <div id="controls-hud">
+      <h3>🎮 Controles de Fútbol</h3>
+      <ul>
+        <li><kbd>WASD</kbd> / <kbd>Flechas</kbd> : Mover Jugador</li>
+        <li><kbd>Shift</kbd> : Esprintar / Correr Rápido</li>
+        <li><kbd>Espacio</kbd> / <kbd>K</kbd> : Mantener para Cargar Chut</li>
+        <li><kbd>E</kbd> : Pase Raso</li>
+      </ul>
+    </div>
+
+    <!-- Goal Announcement Banner -->
+    <div id="goal-banner">¡GOOOOOOL!</div>
+
+    <!-- Touch Mobile Controls -->
+    <div id="touch-controls">
+      <div class="touch-btn" id="btn-pass">PASE</div>
+      <div class="touch-btn" id="btn-shoot" style="background: rgba(231, 76, 60, 0.4);">CHUTAR</div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. SISTEMA DE SONIDOS SINTÉTICOS (Web Audio API - Sin archivos externos)
+    // =========================================================================
+    class SoundController {
+      constructor() {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.crowdGain = null;
+        this.setupCrowdSound();
+      }
+
+      // Sonido de patada / chut
+      playKick(power = 1.0) {
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(20, this.ctx.currentTime + 0.15);
+        
+        gain.gain.setValueAtTime(0.8 * power, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+        
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.15);
+      }
+
+      // Sonido de Silbato
+      playWhistle() {
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc1.type = 'sine';
+        osc2.type = 'sine';
+        osc1.frequency.setValueAtTime(2400, this.ctx.currentTime);
+        osc2.frequency.setValueAtTime(2800, this.ctx.currentTime);
+
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc1.start(); osc2.start();
+        osc1.stop(this.ctx.currentTime + 0.4);
+        osc2.stop(this.ctx.currentTime + 0.4);
+      }
+
+      // Impacto con Poste o Red
+      playPostHit() {
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.3);
+
+        gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.3);
+      }
+
+      // Celebración masiva de Gol
+      playGoalCheer() {
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        this.playWhistle();
+        
+        // Ruido rosa filtrado para emular ovación gigantesca
+        const bufferSize = this.ctx.sampleRate * 3.0;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+
+        const whiteNoise = this.ctx.createBufferSource();
+        whiteNoise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1000;
+        filter.Q.value = 1.0;
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.01, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.6, this.ctx.currentTime + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 3.0);
+
+        whiteNoise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        whiteNoise.start();
+        whiteNoise.stop(this.ctx.currentTime + 3.0);
+      }
+
+      // Ambientes continuos de hinchada
+      setupCrowdSound() {
+        try {
+          const bufferSize = this.ctx.sampleRate * 2.0;
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const output = buffer.getChannelData(0);
+          let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+          for (let i = 0; i < bufferSize; i++) {
+            let white = Math.random() * 2 - 1;
+            b0 = 0.99886 * b0 + white * 0.0555179;
+            b1 = 0.99332 * b1 + white * 0.0750759;
+            b2 = 0.96900 * b2 + white * 0.1538520;
+            b3 = 0.86650 * b3 + white * 0.3104856;
+            b4 = 0.55000 * b4 + white * 0.5329522;
+            b5 = -0.7616 * b5 - white * 0.0168980;
+            output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+            output[i] *= 0.03;
+            b6 = white * 0.115926;
+          }
+
+          const pinkNoise = this.ctx.createBufferSource();
+          pinkNoise.buffer = buffer;
+          pinkNoise.loop = true;
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.value = 600;
+
+          this.crowdGain = this.ctx.createGain();
+          this.crowdGain.gain.value = 0.12;
+
+          pinkNoise.connect(filter);
+          filter.connect(this.crowdGain);
+          this.crowdGain.connect(this.ctx.destination);
+          pinkNoise.start();
+        } catch(e) {}
+      }
+    }
+
+    const sound = new SoundController();
+
+    // =========================================================================
+    // 2. ESCENA, CÁMARA, LUCES Y RENDERIZADOR
+    // =========================================================================
+    const container = document.getElementById('game-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x060c1a);
+    scene.fog = new THREE.FogExp2(0x060c1a, 0.005);
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 500);
+    
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    // Iluminación
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    sunLight.position.set(40, 80, 30);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 10;
+    sunLight.shadow.camera.far = 200;
+    sunLight.shadow.camera.left = -70;
+    sunLight.shadow.camera.right = 70;
+    sunLight.shadow.camera.top = 50;
+    sunLight.shadow.camera.bottom = -50;
+    scene.add(sunLight);
+
+    // Reflectores de estadio (Torres de luz)
+    const floodlightPositions = [
+      [-60, 35, -40], [60, 35, -40],
+      [-60, 35, 40],  [60, 35, 40]
+    ];
+    floodlightPositions.forEach(pos => {
+      const spot = new THREE.SpotLight(0xeef5ff, 0.7);
+      spot.position.set(...pos);
+      spot.target.position.set(0, 0, 0);
+      spot.angle = Math.PI / 3;
+      spot.penumbra = 0.4;
+      scene.add(spot);
+
+      // Torre de estructura metálica
+      const towerGeo = new THREE.CylinderGeometry(0.4, 0.8, 35, 8);
+      const towerMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.3 });
+      const tower = new THREE.Mesh(towerGeo, towerMat);
+      tower.position.set(pos[0], 17.5, pos[2]);
+      scene.add(tower);
+    });
+
+    // =========================================================================
+    // 3. TEXTURA DE CÉSPED Y CONSTRUCCIÓN DEL ESTADIO
+    // =========================================================================
+    function createFieldCanvas() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 2048;
+      canvas.height = 1360;
+      const ctx = canvas.getContext('2d');
+
+      // Franjas de césped
+      ctx.fillStyle = '#27ae60';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const stripes = 20;
+      const stripeW = canvas.width / stripes;
+      ctx.fillStyle = '#2196f3'; // Mezcla o tono
+      ctx.fillStyle = '#229954';
+      for (let i = 0; i < stripes; i += 2) {
+        ctx.fillRect(i * stripeW, 0, stripeW, canvas.height);
+      }
+
+      // Marcaciones reglamentarias en blanco
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.lineWidth = 10;
+
+      const margin = 50;
+      const w = canvas.width - margin * 2;
+      const h = canvas.height - margin * 2;
+
+      // Línea exterior
+      ctx.strokeRect(margin, margin, w, h);
+
+      // Línea central
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2, margin);
+      ctx.lineTo(canvas.width / 2, canvas.height - margin);
+      ctx.stroke();
+
+      // Círculo central
+      ctx.beginPath();
+      ctx.arc(canvas.width / 2, canvas.height / 2, 140, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Punto central
+      ctx.beginPath();
+      ctx.arc(canvas.width / 2, canvas.height / 2, 12, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+
+      // Áreas de Penalti
+      const areaH = 500;
+      const areaW = 240;
+      ctx.strokeRect(margin, (canvas.height - areaH) / 2, areaW, areaH);
+      ctx.strokeRect(canvas.width - margin - areaW, (canvas.height - areaH) / 2, areaW, areaH);
+
+      // Áreas pequeñas
+      const smallH = 240;
+      const smallW = 100;
+      ctx.strokeRect(margin, (canvas.height - smallH) / 2, smallW, smallH);
+      ctx.strokeRect(canvas.width - margin - smallW, (canvas.height - smallH) / 2, smallW, smallH);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      return texture;
+    }
+
+    // Campo de Juego (110m x 70m)
+    const fieldGeo = new THREE.PlaneGeometry(110, 70);
+    const fieldMat = new THREE.MeshStandardMaterial({
+      map: createFieldCanvas(),
+      roughness: 0.8,
+      metalness: 0.1
+    });
+    const field = new THREE.Mesh(fieldGeo, fieldMat);
+    field.rotation.x = -Math.PI / 2;
+    field.receiveShadow = true;
+    scene.add(field);
+
+    // PORTERÍAS REALISTAS CON RED EN 3D
+    function createGoal(xPos, isRotated) {
+      const goalGroup = new THREE.Group();
+      const frameMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.5 });
+
+      // Postes y Larguero (Dimensión reglamentaria proporcional)
+      const postRadius = 0.12;
+      const goalWidth = 10;
+      const goalHeight = 3.6;
+      const goalDepth = 2.5;
+
+      const p1 = new THREE.Mesh(new THREE.CylinderGeometry(postRadius, postRadius, goalHeight), frameMat);
+      p1.position.set(0, goalHeight / 2, -goalWidth / 2);
+      p1.castShadow = true;
+
+      const p2 = p1.clone();
+      p2.position.set(0, goalHeight / 2, goalWidth / 2);
+
+      const crossbar = new THREE.Mesh(new THREE.CylinderGeometry(postRadius, postRadius, goalWidth), frameMat);
+      crossbar.rotation.x = Math.PI / 2;
+      crossbar.position.set(0, goalHeight, 0);
+      crossbar.castShadow = true;
+
+      // Sostén trasero
+      const backFrameGeo = new THREE.CylinderGeometry(0.06, 0.06, goalDepth);
+      const b1 = new THREE.Mesh(backFrameGeo, frameMat);
+      b1.rotation.z = Math.PI / 2;
+      b1.position.set(-goalDepth / 2, goalHeight, -goalWidth / 2);
+
+      const b2 = b1.clone();
+      b2.position.z = goalWidth / 2;
+
+      goalGroup.add(p1, p2, crossbar, b1, b2);
+
+      // RED DETALLADA (Canvas con transparencia)
+      const netCanvas = document.createElement('canvas');
+      netCanvas.width = 128;
+      netCanvas.height = 128;
+      const nctx = netCanvas.getContext('2d');
+      nctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      nctx.lineWidth = 2;
+      for (let i = 0; i <= 128; i += 8) {
+        nctx.beginPath(); nctx.moveTo(i, 0); nctx.lineTo(i, 128); nctx.stroke();
+        nctx.beginPath(); nctx.moveTo(0, i); nctx.lineTo(128, i); nctx.stroke();
+      }
+      const netTex = new THREE.CanvasTexture(netCanvas);
+      netTex.wrapS = THREE.RepeatWrapping;
+      netTex.wrapT = THREE.RepeatWrapping;
+      netTex.repeat.set(10, 4);
+
+      const netMat = new THREE.MeshBasicMaterial({ map: netTex, side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
+      
+      // Pared trasera de la red
+      const backNet = new THREE.Mesh(new THREE.PlaneGeometry(goalWidth, goalHeight), netMat);
+      backNet.rotation.y = Math.PI / 2;
+      backNet.position.set(-goalDepth, goalHeight / 2, 0);
+      goalGroup.add(backNet);
+
+      goalGroup.position.set(xPos, 0, 0);
+      if (isRotated) goalGroup.rotation.y = Math.PI;
+
+      scene.add(goalGroup);
+      return goalGroup;
+    }
+
+    createGoal(-52, false);
+    createGoal(52, true);
+
+    // GRADAS Y AFICIÓN ANIMADA EN 3D
+    const audienceMembers = [];
+    function buildStandsAndCrowd() {
+      const standMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
+      const seatColors = [0xe74c3c, 0x3498db, 0xf1c40f, 0x2ecc71, 0xffffff];
+
+      function createSideStand(zPos, rotY) {
+        const standGroup = new THREE.Group();
+        const rows = 6;
+        const width = 115;
+
+        for (let r = 0; r < rows; r++) {
+          const rowMesh = new THREE.Mesh(new THREE.BoxGeometry(width, 1.2, 2.2), standMat);
+          rowMesh.position.set(0, r * 1.0 + 0.6, r * 2.0);
+          rowMesh.receiveShadow = true;
+          standGroup.add(rowMesh);
+
+          // Crear espectadores (Afición 3D)
+          const crowdCount = 120;
+          for (let c = 0; c < crowdCount; c++) {
+            const spectator = new THREE.Group();
+            const color = seatColors[Math.floor(Math.random() * seatColors.length)];
+            const shirtMat = new THREE.MeshLambertMaterial({ color: color });
+            const skinMat = new THREE.MeshLambertMaterial({ color: 0xe0ac69 });
+
+            // Cuerpo
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.4), shirtMat);
+            body.position.y = 0.3;
+            // Cabeza
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), skinMat);
+            head.position.y = 0.75;
+
+            spectator.add(body, head);
+            spectator.position.set(
+              (Math.random() - 0.5) * (width - 4),
+              r * 1.0 + 1.2,
+              r * 2.0 + (Math.random() * 0.4 - 0.2)
+            );
+
+            // Banderas ocasionales
+            if (Math.random() < 0.08) {
+              const flagPole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.8), standMat);
+              const flagBanner = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.4), shirtMat);
+              flagBanner.position.set(0.3, 0.7, 0);
+              flagPole.add(flagBanner);
+              spectator.add(flagPole);
+            }
+
+            standGroup.add(spectator);
+            audienceMembers.push({
+              mesh: spectator,
+              baseY: spectator.position.y,
+              phase: Math.random() * Math.PI * 2,
+              speed: 3 + Math.random() * 4
+            });
+          }
+        }
+        standGroup.position.set(0, 0, zPos);
+        standGroup.rotation.y = rotY;
+        scene.add(standGroup);
+      }
+
+      createSideStand(-41, 0);
+      createSideStand(41, Math.PI);
+    }
+    buildStandsAndCrowd();
+
+    // =========================================================================
+    // 4. BALÓN DE FÚTBOL CON FÍSICAS REALISTAS
+    // =========================================================================
+    function createSoccerBall() {
+      // Textura clásica de hexágonos para el balón
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.fillStyle = '#111111';
+      for (let i = 0; i < 12; i++) {
+        const x = Math.random() * 256;
+        const y = Math.random() * 256;
+        ctx.beginPath();
+        ctx.arc(x, y, 20, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      const ballTex = new THREE.CanvasTexture(canvas);
+      const ballGeo = new THREE.SphereGeometry(0.45, 32, 32);
+      const ballMat = new THREE.MeshStandardMaterial({
+        map: ballTex,
+        roughness: 0.3,
+        metalness: 0.1
+      });
+
+      const mesh = new THREE.Mesh(ballGeo, ballMat);
+      mesh.castShadow = true;
+      mesh.position.set(0, 0.45, 0);
+      scene.add(mesh);
+
+      return {
+        mesh: mesh,
+        velocity: new THREE.Vector3(0, 0, 0),
+        radius: 0.45,
+        inGoal: false
+      };
+    }
+
+    const ball = createSoccerBall();
+
+    // =========================================================================
+    // 5. JUGADORES 3D (FUTBOLISTAS CON UNIFORME Y ANIMACIONES)
+    // =========================================================================
+    function createPlayerModel(kitColor, shortsColor, isGoalkeeper = false) {
+      const group = new THREE.Group();
+
+      const kitMat = new THREE.MeshStandardMaterial({ color: kitColor, roughness: 0.5 });
+      const shortsMat = new THREE.MeshStandardMaterial({ color: shortsColor, roughness: 0.6 });
+      const skinMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.7 });
+      const bootMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 });
+
+      // Torso / Camiseta de Fútbol
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.8, 0.4), kitMat);
+      torso.position.y = 1.2;
+      torso.castShadow = true;
+      group.add(torso);
+
+      // Pantalones cortos (Shorts)
+      const shorts = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.35, 0.42), shortsMat);
+      shorts.position.y = 0.75;
+      shorts.castShadow = true;
+      group.add(shorts);
+
+      // Cabeza
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), skinMat);
+      head.position.y = 1.8;
+      head.castShadow = true;
+      group.add(head);
+
+      // Pelo
+      const hairMat = new THREE.MeshLambertMaterial({ color: 0x221100 });
+      const hair = new THREE.Mesh(new THREE.SphereGeometry(0.23, 12, 12), hairMat);
+      hair.position.set(0, 1.85, -0.02);
+      hair.scale.set(0.98, 0.6, 0.98);
+      group.add(hair);
+
+      // Articulaciones de Brazos y Piernas
+      function createLimb(mat, w, h, d) {
+        const pivot = new THREE.Group();
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        mesh.position.y = -h / 2;
+        mesh.castShadow = true;
+        pivot.add(mesh);
+        return { pivot, mesh };
+      }
+
+      const leftLeg = createLimb(skinMat, 0.22, 0.65, 0.22);
+      leftLeg.pivot.position.set(-0.2, 0.6, 0);
+
+      const rightLeg = createLimb(skinMat, 0.22, 0.65, 0.22);
+      rightLeg.pivot.position.set(0.2, 0.6, 0);
+
+      // Guayos / Botas de Fútbol
+      const boot1 = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.15, 0.4), bootMat);
+      boot1.position.set(0, -0.65, 0.08);
+      leftLeg.pivot.add(boot1);
+
+      const boot2 = boot1.clone();
+      rightLeg.pivot.add(boot2);
+
+      const leftArm = createLimb(kitMat, 0.18, 0.6, 0.18);
+      leftArm.pivot.position.set(-0.45, 1.5, 0);
+
+      const rightArm = createLimb(kitMat, 0.18, 0.6, 0.18);
+      rightArm.pivot.position.set(0.45, 1.5, 0);
+
+      group.add(leftLeg.pivot, rightLeg.pivot, leftArm.pivot, rightArm.pivot);
+
+      scene.add(group);
+
+      return {
+        mesh: group,
+        leftLeg: leftLeg.pivot,
+        rightLeg: rightLeg.pivot,
+        leftArm: leftArm.pivot,
+        rightArm: rightArm.pivot,
+        animTimer: 0,
+        isKicking: false,
+        kickProgress: 0
+      };
+    }
+
+    // Creación de Jugadores en Campo (Equipos)
+    const player = createPlayerModel(0xe74c3c, 0xffffff); // Jugador Usuario (Camiseta Roja)
+    player.mesh.position.set(-15, 0, 0);
+
+    // Portero Rival (Azul)
+    const rivalGK = createPlayerModel(0xf1c40f, 0x111111, true);
+    rivalGK.mesh.position.set(49, 0, 0);
+
+    // Portero Aliado (Verde)
+    const homeGK = createPlayerModel(0x2ecc71, 0x111111, true);
+    homeGK.mesh.position.set(-49, 0, 0);
+
+    // Defensas y Rivales IA
+    const rivalPlayers = [
+      createPlayerModel(0x3498db, 0x111111),
+      createPlayerModel(0x3498db, 0x111111),
+      createPlayerModel(0x3498db, 0x111111)
+    ];
+    rivalPlayers[0].mesh.position.set(15, 0, -12);
+    rivalPlayers[1].mesh.position.set(25, 0, 10);
+    rivalPlayers[2].mesh.position.set(38, 0, -5);
+
+    // Companeros de Equipo (Rojo)
+    const teamMates = [
+      createPlayerModel(0xe74c3c, 0xffffff),
+      createPlayerModel(0xe74c3c, 0xffffff)
+    ];
+    teamMates[0].mesh.position.set(-10, 0, 18);
+    teamMates[1].mesh.position.set(-2, 0, -15);
+
+    // =========================================================================
+    // 6. CONTROLES DE USUARIO Y LÓGICA DE TIRO / CHUT
+    // =========================================================================
+    const keys = { w: false, a: false, s: false, d: false, shift: false, pass: false };
+    let isChargingShoot = false;
+    let shootPower = 0;
+
+    window.addEventListener('keydown', (e) => {
+      const k = e.key.toLowerCase();
+      if (k === 'w' || k === 'arrowup') keys.w = true;
+      if (k === 'a' || k === 'arrowleft') keys.a = true;
+      if (k === 's' || k === 'arrowdown') keys.s = true;
+      if (k === 'd' || k === 'arrowright') keys.d = true;
+      if (e.shiftKey) keys.shift = true;
+      if (k === 'e') passBall();
+
+      // Cargar Chut con Espacio o K
+      if ((e.code === 'Space' || k === 'k') && !isChargingShoot) {
+        isChargingShoot = true;
+        shootPower = 0;
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      const k = e.key.toLowerCase();
+      if (k === 'w' || k === 'arrowup') keys.w = false;
+      if (k === 'a' || k === 'arrowleft') keys.a = false;
+      if (k === 's' || k === 'arrowdown') keys.s = false;
+      if (k === 'd' || k === 'arrowright') keys.d = false;
+      if (!e.shiftKey) keys.shift = false;
+
+      // Soltar para disparar / chutar
+      if ((e.code === 'Space' || k === 'k') && isChargingShoot) {
+        shootBall(shootPower);
+        isChargingShoot = false;
+        shootPower = 0;
+        updatePowerBarUI(0);
+      }
+    });
+
+    // Controles táctiles
+    document.getElementById('btn-shoot').addEventListener('pointerdown', () => {
+      isChargingShoot = true;
+      shootPower = 0;
+    });
+    document.getElementById('btn-shoot').addEventListener('pointerup', () => {
+      shootBall(shootPower);
+      isChargingShoot = false;
+      shootPower = 0;
+      updatePowerBarUI(0);
+    });
+    document.getElementById('btn-pass').addEventListener('click', passBall);
+
+    function updatePowerBarUI(val) {
+      const bar = document.getElementById('power-bar');
+      const txt = document.getElementById('power-text');
+      bar.style.width = `${val}%`;
+      txt.innerText = `${Math.round(val)}%`;
+    }
+
+    // Disparar o chutar el balón con potencia
+    function shootBall(powerPercent) {
+      const distToBall = player.mesh.position.distanceTo(ball.mesh.position);
+      if (distToBall < 2.5) {
+        const p = Math.max(0.2, powerPercent / 100);
+        
+        // Dirección basada en la orientación del jugador
+        const dir = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.mesh.rotation.y);
+        dir.normalize();
+
+        // Aplicar fuerza (horizontal + elevación)
+        const forceHorizontal = 18 + p * 28;
+        const forceVertical = 4 + p * 14;
+
+        ball.velocity.x = dir.x * forceHorizontal;
+        ball.velocity.z = dir.z * forceHorizontal;
+        ball.velocity.y = forceVertical;
+
+        // Animación de patada
+        player.isKicking = true;
+        player.kickProgress = 0;
+
+        sound.playKick(p);
+      }
+    }
+
+    // Pase raso
+    function passBall() {
+      const distToBall = player.mesh.position.distanceTo(ball.mesh.position);
+      if (distToBall < 2.5) {
+        const dir = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.mesh.rotation.y);
+        ball.velocity.x = dir.x * 20;
+        ball.velocity.z = dir.z * 20;
+        ball.velocity.y = 1.5;
+
+        player.isKicking = true;
+        player.kickProgress = 0;
+        sound.playKick(0.4);
+      }
+    }
+
+    // =========================================================================
+    // 7. FÍSICAS DE BALÓN, DRIBLES Y COLISIONES
+    // =========================================================================
+    function updateBallPhysics(delta) {
+      // Movimiento por velocidad
+      ball.mesh.position.x += ball.velocity.x * delta;
+      ball.mesh.position.y += ball.velocity.y * delta;
+      ball.mesh.position.z += ball.velocity.z * delta;
+
+      // Gravedad
+      if (ball.mesh.position.y > ball.radius) {
+        ball.velocity.y -= 22 * delta;
+      } else {
+        // Impacto / Bote en el césped
+        ball.mesh.position.y = ball.radius;
+        if (Math.abs(ball.velocity.y) > 1.5) {
+          ball.velocity.y = -ball.velocity.y * 0.55; // Coeficiente de restitución
+        } else {
+          ball.velocity.y = 0;
+        }
+      }
+
+      // Fricción con el césped
+      const friction = ball.mesh.position.y <= ball.radius + 0.05 ? 0.965 : 0.992;
+      ball.velocity.x *= friction;
+      ball.velocity.z *= friction;
+
+      // Rotación visual del balón según su movimiento
+      const speed = Math.sqrt(ball.velocity.x ** 2 + ball.velocity.z ** 2);
+      if (speed > 0.1) {
+        ball.mesh.rotation.x += ball.velocity.z * delta * 2;
+        ball.mesh.rotation.z -= ball.velocity.x * delta * 2;
+      }
+
+      // Conducción / Drible cercano si el jugador camina sobre el balón
+      const distToPlayer = player.mesh.position.distanceTo(ball.mesh.position);
+      if (distToPlayer < 1.3 && ball.velocity.length() < 5 && !isChargingShoot) {
+        const forward = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.mesh.rotation.y);
+        const targetPos = player.mesh.position.clone().add(forward.multiplyScalar(0.9));
+        ball.mesh.position.x = THREE.MathUtils.lerp(ball.mesh.position.x, targetPos.x, delta * 10);
+        ball.mesh.position.z = THREE.MathUtils.lerp(ball.mesh.position.z, targetPos.z, delta * 10);
+      }
+
+      // Colisión con Postes de la Portería Rival (x = 52, z entre -5 y 5)
+      if (Math.abs(ball.mesh.position.x - 52) < 0.8 && Math.abs(Math.abs(ball.mesh.position.z) - 5) < 0.8 && ball.mesh.position.y < 3.8) {
+        ball.velocity.x = -ball.velocity.x * 0.7;
+        sound.playPostHit();
+      }
+
+      // Limites laterales del campo (Líneas de banda)
+      if (Math.abs(ball.mesh.position.z) > 34.5) {
+        ball.velocity.z = -ball.velocity.z * 0.6;
+        ball.mesh.position.z = Math.sign(ball.mesh.position.z) * 34.5;
+      }
+      if (Math.abs(ball.mesh.position.x) > 54) {
+        ball.velocity.x = -ball.velocity.x * 0.6;
+        ball.mesh.position.x = Math.sign(ball.mesh.position.x) * 54;
+      }
+    }
+
+    // =========================================================================
+    // 8. INTELIGENCIA ARTIFICIAL DE PORTEROS Y RIVALES
+    // =========================================================================
+    function updateAI(delta) {
+      // Portero Rival ataja y sigue el balón horizontalmente
+      const gk = rivalGK.mesh;
+      const targetZ = THREE.MathUtils.clamp(ball.mesh.position.z, -4.2, 4.2);
+      gk.position.z = THREE.MathUtils.lerp(gk.position.z, targetZ, delta * 4.5);
+
+      // Si el balón está muy cerca, el portero salta o se lanza a atajar
+      const distToGK = gk.position.distanceTo(ball.mesh.position);
+      if (distToGK < 3.5 && ball.velocity.length() > 2) {
+        gk.position.x = THREE.MathUtils.lerp(gk.position.x, ball.mesh.position.x, delta * 3);
+        if (distToGK < 1.2) {
+          // Desvío del portero
+          ball.velocity.x = -Math.abs(ball.velocity.x) * 0.8;
+          ball.velocity.z += (Math.random() - 0.5) * 10;
+          sound.playPostHit();
+        }
+      }
+
+      // Defensas Rivales persiguen el balón moderadamente
+      rivalPlayers.forEach((rival, idx) => {
+        const rMesh = rival.mesh;
+        const dist = rMesh.position.distanceTo(ball.mesh.position);
+        
+        if (dist < 18 && ball.mesh.position.x > -10) {
+          const dir = new THREE.Vector3().subVectors(ball.mesh.position, rMesh.position);
+          dir.y = 0;
+          dir.normalize();
+          
+          rMesh.rotation.y = Math.atan2(dir.x, dir.z);
+          rMesh.translateZ(3.8 * delta);
+
+          // Animación de carrera
+          rival.animTimer += delta * 8;
+          rival.leftLeg.rotation.x = Math.sin(rival.animTimer) * 0.6;
+          rival.rightLeg.rotation.x = -Math.sin(rival.animTimer) * 0.6;
+
+          // Si la IA alcanza el balón, despeja
+          if (dist < 1.1) {
+            ball.velocity.x = -22;
+            ball.velocity.z = (Math.random() - 0.5) * 15;
+            sound.playKick(0.6);
+          }
+        }
+      });
+    }
+
+    // =========================================================================
+    // 9. MECÁNICA DE GOL, MARCADOR Y CELEBRACIÓN DE FUEGOS ARTIFICIALES
+    // =========================================================================
+    let scoreRed = 0;
+    let scoreBlue = 0;
+    let matchTimeSeconds = 0;
+    const goalBanner = document.getElementById('goal-banner');
+
+    // Partículas 3D para explosión de Gol
+    const fireworks = [];
+    function createGoalFireworks() {
+      const geo = new THREE.SphereGeometry(0.15, 6, 6);
+      const colors = [0xff0055, 0x00ffcc, 0xffea00, 0xffffff, 0xff00ff];
+      
+      for (let i = 0; i < 60; i++) {
+        const mat = new THREE.MeshBasicMaterial({ color: colors[Math.floor(Math.random() * colors.length)] });
+        const p = new THREE.Mesh(geo, mat);
+        p.position.set(51, 2 + Math.random() * 3, (Math.random() - 0.5) * 8);
+        scene.add(p);
+
+        fireworks.push({
+          mesh: p,
+          vel: new THREE.Vector3((Math.random() - 0.5) * 15, Math.random() * 12 + 4, (Math.random() - 0.5) * 15),
+          life: 1.0
+        });
+      }
+    }
+
+    function checkGoal() {
+      if (ball.inGoal) return;
+
+      // Detector de Gol en Portería Rival (x > 51.5, |z| < 4.8, y < 3.5)
+      if (ball.mesh.position.x > 51.5 && Math.abs(ball.mesh.position.z) < 4.8 && ball.mesh.position.y < 3.5) {
+        ball.inGoal = true;
+        scoreRed++;
+        document.getElementById('score-red').innerText = scoreRed;
+        
+        goalBanner.innerText = "¡GOOOOOOL!";
+        goalBanner.classList.add('show');
+
+        sound.playGoalCheer();
+        createGoalFireworks();
+
+        setTimeout(resetAfterGoal, 3200);
+      }
+      // Detector de Gol en Portería Aliada (Autogol / Rival)
+      else if (ball.mesh.position.x < -51.5 && Math.abs(ball.mesh.position.z) < 4.8 && ball.mesh.position.y < 3.5) {
+        ball.inGoal = true;
+        scoreBlue++;
+        document.getElementById('score-blue').innerText = scoreBlue;
+
+        goalBanner.innerText = "GOL RIVAL";
+        goalBanner.classList.add('show');
+
+        sound.playWhistle();
+        setTimeout(resetAfterGoal, 3200);
+      }
+    }
+
+    function resetAfterGoal() {
+      goalBanner.classList.remove('show');
+      ball.mesh.position.set(0, 0.45, 0);
+      ball.velocity.set(0, 0, 0);
+      player.mesh.position.set(-15, 0, 0);
+      ball.inGoal = false;
+    }
+
+    // Cronómetro
+    setInterval(() => {
+      matchTimeSeconds++;
+      const m = String(Math.floor(matchTimeSeconds / 60)).padStart(2, '0');
+      const s = String(matchTimeSeconds % 60).padStart(2, '0');
+      document.getElementById('match-timer').innerText = `${m}:${s}`;
+    }, 1000);
+
+    // =========================================================================
+    // 10. BUCLE DE ANIMACIÓN Y CÁMARA PROFESIONAL
+    // =========================================================================
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = Math.min(clock.getDelta(), 0.1);
+      const time = clock.getElapsedTime();
+
+      // Carga de Chut
+      if (isChargingShoot) {
+        shootPower = Math.min(100, shootPower + delta * 120);
+        updatePowerBarUI(shootPower);
+      }
+
+      // --- MOVIMIENTO DEL JUGADOR PRINCIPAL ---
+      const speed = keys.shift ? 11.0 : 6.0;
+      let moveX = 0;
+      let moveZ = 0;
+
+      if (keys.w) moveX += 1;
+      if (keys.s) moveX -= 1;
+      if (keys.a) moveZ -= 1;
+      if (keys.d) moveZ += 1;
+
+      const moveDir = new THREE.Vector3(moveX, 0, moveZ).normalize();
+
+      if (moveDir.length() > 0) {
+        const targetAngle = Math.atan2(moveDir.x, moveDir.z);
+        player.mesh.rotation.y = THREE.MathUtils.lerp(player.mesh.rotation.y, targetAngle, delta * 12);
+        player.mesh.translateZ(speed * delta);
+
+        // Animación articulada de piernas y brazos al correr
+        player.animTimer += delta * speed * 1.8;
+        player.leftLeg.rotation.x = Math.sin(player.animTimer) * 0.7;
+        player.rightLeg.rotation.x = -Math.sin(player.animTimer) * 0.7;
+        player.leftArm.rotation.x = -Math.sin(player.animTimer) * 0.7;
+        player.rightArm.rotation.x = Math.sin(player.animTimer) * 0.7;
+      } else {
+        // Estado de reposo
+        player.leftLeg.rotation.x = THREE.MathUtils.lerp(player.leftLeg.rotation.x, 0, delta * 10);
+        player.rightLeg.rotation.x = THREE.MathUtils.lerp(player.rightLeg.rotation.x, 0, delta * 10);
+        player.leftArm.rotation.x = THREE.MathUtils.lerp(player.leftArm.rotation.x, 0, delta * 10);
+        player.rightArm.rotation.x = THREE.MathUtils.lerp(player.rightArm.rotation.x, 0, delta * 10);
+      }
+
+      // Restricción de límites de campo para el jugador
+      player.mesh.position.x = THREE.MathUtils.clamp(player.mesh.position.x, -51, 51);
+      player.mesh.position.z = THREE.MathUtils.clamp(player.mesh.position.z, -33, 33);
+
+      // --- ANIMACIÓN DE AFICIÓN / PÚBLICO ---
+      audienceMembers.forEach(aud => {
+        aud.mesh.position.y = aud.baseY + Math.abs(Math.sin(time * aud.speed + aud.phase)) * 0.25;
+      });
+
+      // --- FÍSICAS DE BALÓN E IA ---
+      updateBallPhysics(delta);
+      updateAI(delta);
+      checkGoal();
+
+      // Actualización de Fuegos Artificiales
+      for (let i = fireworks.length - 1; i >= 0; i--) {
+        const p = fireworks[i];
+        p.mesh.position.addScaledVector(p.vel, delta);
+        p.vel.y -= 9.8 * delta;
+        p.life -= delta * 0.5;
+        if (p.life <= 0) {
+          scene.remove(p.mesh);
+          fireworks.splice(i, 1);
+        }
+      }
+
+      // --- CÁMARA ESTILO M TRANSMISIÓN TELEVISIVA DE FÚTBOL ---
+      // Sigue al balón y al jugador con suavidad panorámica
+      const camTargetX = THREE.MathUtils.lerp(player.mesh.position.x, ball.mesh.position.x, 0.5);
+      const camTargetZ = THREE.MathUtils.lerp(player.mesh.position.z, ball.mesh.position.z, 0.5);
+
+      camera.position.x = THREE.MathUtils.lerp(camera.position.x, camTargetX - 18, delta * 3);
+      camera.position.y = THREE.MathUtils.lerp(camera.position.y, 16, delta * 3);
+      camera.position.z = THREE.MathUtils.lerp(camera.position.z, camTargetZ + 22, delta * 3);
+      
+      camera.lookAt(camTargetX + 4, 1.2, camTargetZ);
+
+      renderer.render(scene, camera);
+    }
+
+    // Ajuste de Pantalla
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Iniciar juego al cargar
+    window.onload = () => {
+      animate();
+    };
+  </script>
+</body>
+</html>
